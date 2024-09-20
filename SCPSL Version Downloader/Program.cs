@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
+#pragma warning disable SYSLIB0014
 
 namespace SCPSL_Version_Downloader;
 
@@ -86,33 +87,29 @@ public class Programm
     }
     private static async Task Start()
     {
-        for (int i = 0; i < _appManifests.Count; i++)
+        var selectedVersion = SelectVersion();
+        while (selectedVersion == null)
         {
-            Console.WriteLine($"{i + 1}. {_appManifests[i].VersionName}");
+            selectedVersion = SelectVersion();
         }
-
-        Console.Write("Select a version: ");
-        if (!int.TryParse(Console.ReadLine(), out var selectedIndex))
-        {
-            Console.WriteLine("Invalid selection.");
-            return;
-        }
-        selectedIndex -=1;
-
-        if (selectedIndex < 0 || selectedIndex >= _appManifests.Count)
-        {
-            Console.WriteLine("Invalid selection.");
-            return;
-        }
-
-        var selectedVersion = _appManifests[selectedIndex];
-        Console.WriteLine($"Selected Version {selectedVersion.VersionName} Manifest: {selectedVersion.ManifestId}");
-        if (!File.Exists(Path.Combine(SteamCmdDirectory, SteamCmdExecutable)))
-        {
-            await DownloadSteamCmd();
-        }
+        await DownloadSteamCmd();
         var download = DownloadGame(selectedVersion);
-
+        await ShowDots(download);
+        CopyGame(selectedVersion);
+        Console.WriteLine("Done!");
+        Console.ReadKey();
+    }
+    private static void CopyGame(AppManifest selectedVersion)
+    {
+        Console.Clear();
+        if (!Directory.Exists(GamePath))
+            Directory.CreateDirectory(GamePath);
+        var appDir = Path.Combine(SteamCmdDirectory, $"steamapps/content/app_{AppId}");
+        CopyFilesRecursively(appDir, GamePath + $"/{selectedVersion.VersionName}");
+        Directory.Delete(appDir, true);
+    }
+    private static async Task ShowDots(Task download)
+    {
         var dots = 1;
         while (!download.IsCompleted)
         {
@@ -130,14 +127,31 @@ public class Programm
             await Task.Delay(TimeSpan.FromSeconds(1f));
 
         }
-        Console.Clear();
-        Console.WriteLine("Done moving game"); 
-        if (!Directory.Exists(GamePath))
-            Directory.CreateDirectory(GamePath);
-        var appDir = Path.Combine(SteamCmdDirectory, $"steamapps/content/app_{AppId}");
-        CopyFilesRecursively(appDir, GamePath + $"/{selectedVersion.VersionName}");
-        Directory.Delete(appDir, true);
-        Console.ReadKey();
+    }
+    private static AppManifest? SelectVersion()
+    {
+        for (int i = 0; i < _appManifests.Count; i++)
+        {
+            Console.WriteLine($"{i + 1}. {_appManifests[i].VersionName}");
+        }
+
+        Console.Write("Select a version: ");
+        if (!int.TryParse(Console.ReadLine(), out var selectedIndex))
+        {
+            Console.WriteLine("Invalid selection.");
+            return null;
+        }
+        selectedIndex -=1;
+
+        if (selectedIndex < 0 || selectedIndex >= _appManifests.Count)
+        {
+            Console.WriteLine("Invalid selection.");
+            return null;
+        }
+
+        var selectedVersion = _appManifests[selectedIndex];
+        Console.WriteLine($"Selected Version {selectedVersion.VersionName} Manifest: {selectedVersion.ManifestId}");
+        return selectedVersion;
     }
     private static void CopyFilesRecursively(string sourcePath, string targetPath)
     {
@@ -150,9 +164,14 @@ public class Programm
         {
             File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
         }
+        
     }
     private static async Task DownloadSteamCmd()
     {
+        if (File.Exists(Path.Combine(SteamCmdDirectory, SteamCmdExecutable)))
+        {
+            return;
+        }
         if (!Directory.Exists(SteamCmdDirectory))
         {
             Directory.CreateDirectory(SteamCmdDirectory);
