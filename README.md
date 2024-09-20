@@ -18,7 +18,6 @@
 
 * This tool is not affiliated with Northwood Studios or the SCP: Secret Laboratory development team.
 * Use this at your own risk.  Make sure you understand the implications of playing older game versions.
-* Always backup your current game files before installing an older version.
 
 ## Contributing
 
