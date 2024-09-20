@@ -11,7 +11,9 @@ public class Config
     {
         if (!File.Exists("Config.yml"))
         {
-            File.WriteAllText("Config.yml",new Serializer().Serialize(new Config()));
+            Instance = new Config();
+            File.WriteAllText("Config.yml",new Serializer().Serialize(Instance));
+            return;
         }
         var text = File.ReadAllText("Config.yml");
         Instance = new Deserializer().Deserialize<Config>(text);

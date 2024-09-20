@@ -7,15 +7,15 @@ namespace SCPSL_Version_Downloader;
 
 public class Programm
 {
-    private const string Url = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip";
-    private const string DestinationPath = "steamcmd.zip"; // Where to save the downloaded file
-
-    private const string SteamCmdDir = "SteamCmd";
-    private const string SteamCmd = "steamcmd.exe";
-    const string GamePath = "SCP Secret Laboratory";
-    const int AppId = 700330 ;
+    private const string SteamCmdUrl = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip";
+    private const string SteamCmdZip = "steamcmd.zip";
+    private const string SteamCmdDirectory = "SteamCmd";
+    private const string SteamCmdExecutable = "steamcmd.exe";
+    private const string GamePath = "SCP Secret Laboratory";
+    private const int AppId = 700330 ;
     private const int DepotId = 700331;
-    public static List<AppManifest> AppManifests =[
+    private readonly static List<AppManifest> _appManifests =
+    [
         new AppManifest("3.3.3", 7924322849000851029),
         new AppManifest("4.0.0?", 4963207822109185377),
         new AppManifest("5.0.0?", 5722470823901679166),
@@ -76,41 +76,44 @@ public class Programm
         try
         {
             Config.Load();
-            
             await Start();
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             Console.ReadKey();
-            throw;
         }
     }
     private static async Task Start()
     {
-        for (int i = 0; i < AppManifests.Count; i++)
+        for (int i = 0; i < _appManifests.Count; i++)
         {
-            Console.WriteLine($"{i + 1}. {AppManifests[i].VersionName}");
+            Console.WriteLine($"{i + 1}. {_appManifests[i].VersionName}");
         }
 
         Console.Write("Select a version: ");
-        int selectedIndex = int.Parse(Console.ReadLine() ?? string.Empty) - 1;
+        if (!int.TryParse(Console.ReadLine(), out var selectedIndex))
+        {
+            Console.WriteLine("Invalid selection.");
+            return;
+        }
+        selectedIndex -=1;
 
-        if (selectedIndex < 0 || selectedIndex >= AppManifests.Count)
+        if (selectedIndex < 0 || selectedIndex >= _appManifests.Count)
         {
             Console.WriteLine("Invalid selection.");
             return;
         }
 
-        var selectedVersion = AppManifests[selectedIndex];
+        var selectedVersion = _appManifests[selectedIndex];
         Console.WriteLine($"Selected Version {selectedVersion.VersionName} Manifest: {selectedVersion.ManifestId}");
-        if (!File.Exists(Path.Combine(SteamCmdDir, SteamCmd)))
+        if (!File.Exists(Path.Combine(SteamCmdDirectory, SteamCmdExecutable)))
         {
             await DownloadSteamCmd();
         }
         var download = DownloadGame(selectedVersion);
 
-        int dots = 1;
+        var dots = 1;
         while (!download.IsCompleted)
         {
             var text = "Downloading";
@@ -131,7 +134,7 @@ public class Programm
         Console.WriteLine("Done moving game"); 
         if (!Directory.Exists(GamePath))
             Directory.CreateDirectory(GamePath);
-        var appDir = Path.Combine(SteamCmdDir, $"steamapps/content/app_{AppId}");
+        var appDir = Path.Combine(SteamCmdDirectory, $"steamapps/content/app_{AppId}");
         CopyFilesRecursively(appDir, GamePath + $"/{selectedVersion.VersionName}");
         Directory.Delete(appDir, true);
         Console.ReadKey();
@@ -150,9 +153,9 @@ public class Programm
     }
     private static async Task DownloadSteamCmd()
     {
-        if (!Directory.Exists(SteamCmdDir))
+        if (!Directory.Exists(SteamCmdDirectory))
         {
-            Directory.CreateDirectory(SteamCmdDir);
+            Directory.CreateDirectory(SteamCmdDirectory);
         }
 
         using (WebClient client = new WebClient())
@@ -180,24 +183,23 @@ public class Programm
             };
 
             Console.WriteLine("Downloading steamcmd...");
-            client.DownloadFileAsync(new Uri(Url), Path.Combine(SteamCmdDir, DestinationPath));
+            client.DownloadFileAsync(new Uri(SteamCmdUrl), Path.Combine(SteamCmdDirectory, SteamCmdZip));
             await tcs.Task;
             
         }
         Console.WriteLine("Extracting steamcmd...");
-        ZipFile.ExtractToDirectory(Path.Combine(SteamCmdDir, DestinationPath), SteamCmdDir);
-        File.Delete(Path.Combine(SteamCmdDir, DestinationPath));
+        ZipFile.ExtractToDirectory(Path.Combine(SteamCmdDirectory, SteamCmdZip), SteamCmdDirectory);
+        File.Delete(Path.Combine(SteamCmdDirectory, SteamCmdZip));
     }
     private static async Task DownloadGame(AppManifest manifest)
     {
-        
         Console.Clear();
         var arguments = $"+login {Config.Username} {Config.Password} +download_depot {AppId} {DepotId} {manifest.ManifestId} +quit";
 
         bool wroteEmptyError = false;
         ProcessStartInfo startInfo = new ProcessStartInfo
         {
-            FileName = Path.Combine(Directory.GetCurrentDirectory(),SteamCmdDir, SteamCmd),
+            FileName = Path.Combine(Directory.GetCurrentDirectory(),SteamCmdDirectory, SteamCmdExecutable),
             Arguments = arguments,
             RedirectStandardOutput = true,  // Ausgabe in der Konsole anzeigen
             RedirectStandardError = true,
