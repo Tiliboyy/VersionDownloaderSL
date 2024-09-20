@@ -6,7 +6,7 @@
 
 * **Simple Interface:** Quickly select and download the version you want.
 * **Version History:** Access a comprehensive list of previous game builds.
-* 
+  
 ## How to Use
 
 1. **Download:** Get the latest release from the [Releases]([Releases URL]) section.
