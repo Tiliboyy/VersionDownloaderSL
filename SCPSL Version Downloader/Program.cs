@@ -93,8 +93,7 @@ public class Programm
             selectedVersion = SelectVersion();
         }
         await DownloadSteamCmd();
-        var download = DownloadGame(selectedVersion);
-        await ShowDots(download);
+        await Download(selectedVersion);
         CopyGame(selectedVersion);
         Console.WriteLine("Done!");
         Console.ReadKey();
@@ -108,8 +107,9 @@ public class Programm
         CopyFilesRecursively(appDir, GamePath + $"/{selectedVersion.VersionName}");
         Directory.Delete(appDir, true);
     }
-    private static async Task ShowDots(Task download)
+    private static async Task Download(AppManifest selectedVersion)
     {
+        var download = DownloadGame(selectedVersion);
         var dots = 1;
         while (!download.IsCompleted)
         {
@@ -223,7 +223,7 @@ public class Programm
             RedirectStandardOutput = true,  // Ausgabe in der Konsole anzeigen
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = false
+            CreateNoWindow = true
         };
 
         Console.WriteLine("Starting Download... (This might take a while)");
@@ -237,6 +237,10 @@ public class Programm
         }
         process.OutputDataReceived += (sender, args) =>
         {
+            var current = "";
+            if (File.Exists("logs.txt"))
+                current = File.ReadAllText("logs.txt");
+            File.WriteAllText("logs.txt",current+"\n"+args.Data);
         };
         process.ErrorDataReceived += (sender, args) =>
         {
@@ -245,6 +249,11 @@ public class Programm
                 return;
             }
             Console.WriteLine("ERROR: " + args.Data);
+            var current = "";
+            if (File.Exists("logs.txt"))
+                current = File.ReadAllText("logs.txt");
+            File.WriteAllText("logs.txt",current+"\n"+args.Data);
+
         };
 
         process.BeginOutputReadLine();
