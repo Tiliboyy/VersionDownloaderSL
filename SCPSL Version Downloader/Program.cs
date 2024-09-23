@@ -6,7 +6,7 @@ using System.Net;
 
 namespace SCPSL_Version_Downloader;
 
-public class Programm
+public static class Program
 {
     private const string SteamCmdUrl = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip";
     private const string SteamCmdZip = "steamcmd.zip";
@@ -15,7 +15,12 @@ public class Programm
     private const string GamePath = "SCP Secret Laboratory";
     private const int AppId = 700330 ;
     private const int DepotId = 700331;
-    private readonly static List<AppManifest> _appManifests =
+
+    #region manifests
+
+    
+
+    private static readonly List<AppManifest> AppManifests =
     [
         new AppManifest("3.3.3", 7924322849000851029),
         new AppManifest("4.0.0?", 4963207822109185377),
@@ -70,8 +75,9 @@ public class Programm
         new AppManifest("13.0.0", 8846682790161457503),
         new AppManifest("13.1", 6126205187152802267)
     ];
+    #endregion
 
-    public static Config Config => Config.Instance;
+    private static Config Config => Config.Instance;
     public static async Task Main()
     {
         try
@@ -110,6 +116,8 @@ public class Programm
     private static async Task Download(AppManifest selectedVersion)
     {
         var download = DownloadGame(selectedVersion);
+        
+        
         var dots = 1;
         while (!download.IsCompleted)
         {
@@ -127,12 +135,13 @@ public class Programm
             await Task.Delay(TimeSpan.FromSeconds(1f));
 
         }
+        Console.WriteLine("Task Done!");
     }
     private static AppManifest? SelectVersion()
     {
-        for (int i = 0; i < _appManifests.Count; i++)
+        for (int i = 0; i < AppManifests.Count; i++)
         {
-            Console.WriteLine($"{i + 1}. {_appManifests[i].VersionName}");
+            Console.WriteLine($"{i + 1}. {AppManifests[i].VersionName}");
         }
 
         Console.Write("Select a version: ");
@@ -143,13 +152,13 @@ public class Programm
         }
         selectedIndex -=1;
 
-        if (selectedIndex < 0 || selectedIndex >= _appManifests.Count)
+        if (selectedIndex < 0 || selectedIndex >= AppManifests.Count)
         {
             Console.WriteLine("Invalid selection.");
             return null;
         }
 
-        var selectedVersion = _appManifests[selectedIndex];
+        var selectedVersion = AppManifests[selectedIndex];
         Console.WriteLine($"Selected Version {selectedVersion.VersionName} Manifest: {selectedVersion.ManifestId}");
         return selectedVersion;
     }
